@@ -7,15 +7,22 @@
     "dev": "node --watch --experimental-strip-types src/index.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@readiness/shared": "workspace:*",
-    "hono": "^4.6.15",
     "@hono/node-server": "^1.13.7",
+    "@readiness/shared": "workspace:*",
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.6.15",
+    "postgres": "^3.4.9",
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/node": "^26.6.5",
+    "drizzle-kit": "^0.31.11",
     "typescript": "^5.7.2"
   }
 }
