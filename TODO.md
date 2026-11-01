@@ -11,9 +11,16 @@
 - [x] API routes: recovery days (create, list, get)
 - [x] API routes: recovery days (edit, delete)
 - [x] Seed ~200 exercises with tags
-- [ ] React UI: log a workout
+- [x] React UI: log a workout
+- [ ] React UI: design changes to the log screen (Christian to decide what)
+- [ ] React UI: hide sets, reps and kg by default on cardio rows
+- [ ] React UI: say which row an error means when an exercise appears twice
+- [ ] React UI: discard workout button
+- [ ] Test the log screen on a real phone
 - [ ] React UI: view workout history
 - [ ] React UI: log a recovery day
+- [ ] Decide on hosting and login, so the app can be used at the gym
+- [ ] Use the app myself for a couple of weeks before Layer 2
 
 ## Layer 2: HRV import
 

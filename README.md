@@ -10,7 +10,7 @@ The project is built in layers, and each one has to work on its own before the n
 
 | Layer | What it adds | Status |
 | --- | --- | --- |
-| 1. Log and exercise library | Database, API, seeded exercises, React UI for logging | API and seed data built, UI not started |
+| 1. Log and exercise library | Database, API, seeded exercises, React UI for logging | API, seed data and workout logging built; history and recovery screens not started |
 | 2. HRV import | Garmin export parser, HRV trend against training load | Planned |
 | 3. AI | Session proposals checked against fixed rules in code | Planned |
 | 4. PWA | Installable and good on a phone | Planned |
