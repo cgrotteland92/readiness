@@ -131,13 +131,30 @@ export const recoverySourceName = z.enum(["manual", "fit_import"]);
 
 export const recoveryDaySchema = z.object({
   date: isoDate,
-  hrv: z.number().positive().optional(), // ms, samme metode hver dag (hold deg til Garmin-tallet)
-  restingHr: z.number().int().positive().optional(),
+  hrv: z.number().positive().max(9999.9).optional(), // ms, samme metode hver dag (hold deg til Garmin-tallet)
+  restingHr: z.number().int().positive().max(maxInt).optional(),
   sleepHours: z.number().min(0).max(24).optional(),
   feeling: z.number().int().min(1).max(5).optional(), // din egen følelse, 1 til 5
   source: recoverySourceName,
 });
 export type RecoveryDay = z.infer<typeof recoveryDaySchema>;
+
+/**
+ * Input for logging a recovery day by hand. The server sets the source.
+ * A day with no values is rejected: it carries no information, and missing
+ * data must never look like a logged day.
+ */
+export const createRecoveryDayInput = recoveryDaySchema
+  .omit({ source: true })
+  .refine(
+    (day) =>
+      day.hrv !== undefined ||
+      day.restingHr !== undefined ||
+      day.sleepHours !== undefined ||
+      day.feeling !== undefined,
+    "Provide at least one value"
+  );
+export type CreateRecoveryDayInput = z.infer<typeof createRecoveryDayInput>;
 
 // ---------- Restitusjonskilder (adapter-mønster) ----------
 
