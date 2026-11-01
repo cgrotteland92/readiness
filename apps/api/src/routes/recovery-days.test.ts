@@ -171,6 +171,152 @@ describe("GET /recovery-days/:date", () => {
   });
 });
 
+describe("PUT /recovery-days/:date", () => {
+  function put(date: string, body: unknown) {
+    return app.request(`/recovery-days/${date}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: typeof body === "string" ? body : JSON.stringify(body),
+    });
+  }
+
+  it("corrects a logged day", async () => {
+    await post(fullDay);
+
+    const res = await put("2026-11-01", { hrv: 55, feeling: 2 });
+
+    expect(res.status).toBe(200);
+    const stored = await manualSource.getDay("2026-11-01");
+    expect(stored).toMatchObject({ hrv: 55, feeling: 2 });
+    expect(await res.json()).toEqual({
+      date: "2026-11-01",
+      hrv: 55,
+      feeling: 2,
+      source: "manual",
+    });
+  });
+
+  it("clears values that are left out instead of keeping them", async () => {
+    await post(fullDay);
+
+    await put("2026-11-01", { feeling: 3 });
+
+    const stored = await manualSource.getDay("2026-11-01");
+    expect(stored?.hrv).toBeUndefined();
+    expect(stored?.sleepHours).toBeUndefined();
+  });
+
+  it("uses the date in the URL, not one in the body", async () => {
+    await post(fullDay);
+
+    const res = await put("2026-11-01", { date: "2026-12-24", feeling: 3 });
+
+    expect((await res.json()).date).toBe("2026-11-01");
+    expect(await manualSource.getDay("2026-12-24")).toBeNull();
+  });
+
+  it("does not change other days", async () => {
+    await post(fullDay);
+    await post({ ...fullDay, date: "2026-11-02" });
+
+    await put("2026-11-01", { feeling: 1 });
+
+    const other = await manualSource.getDay("2026-11-02");
+    expect(other?.feeling).toBe(fullDay.feeling);
+  });
+
+  it("does not change imported data for the same date", async () => {
+    await insertImportedDay("2026-11-01");
+    await post(fullDay);
+
+    await put("2026-11-01", { hrv: 55 });
+
+    const rows = await db.select().from(recoveryDays);
+    const imported = rows.find((row) => row.source === "fit_import");
+    expect(imported?.hrv).toBe(99);
+  });
+
+  it("returns 404 when only imported data exists for the date", async () => {
+    await insertImportedDay("2026-11-01");
+
+    const res = await put("2026-11-01", { hrv: 55 });
+
+    expect(res.status).toBe(404);
+    const [imported] = await db.select().from(recoveryDays);
+    expect(imported.hrv).toBe(99);
+  });
+
+  it("returns 400 for an invalid date", async () => {
+    const res = await put("2026-02-30", { feeling: 3 });
+
+    expect(res.status).toBe(400);
+  });
+
+  it.each([
+    ["no values", {}],
+    ["feeling above 5", { feeling: 6 }],
+    ["hrv too large for the column", { hrv: 10_000 }],
+    ["malformed JSON", "{not json"],
+  ])("returns 400 for %s and changes nothing", async (_label, body) => {
+    await post(fullDay);
+
+    const res = await put("2026-11-01", body);
+
+    expect(res.status).toBe(400);
+    const stored = await manualSource.getDay("2026-11-01");
+    expect(stored?.hrv).toBe(fullDay.hrv);
+  });
+});
+
+describe("DELETE /recovery-days/:date", () => {
+  function remove(date: string) {
+    return app.request(`/recovery-days/${date}`, { method: "DELETE" });
+  }
+
+  it("deletes the logged day", async () => {
+    await post(fullDay);
+
+    const res = await remove("2026-11-01");
+
+    expect(res.status).toBe(204);
+    expect(await manualSource.getDay("2026-11-01")).toBeNull();
+  });
+
+  it("does not delete other days", async () => {
+    await post(fullDay);
+    await post({ ...fullDay, date: "2026-11-02" });
+
+    await remove("2026-11-01");
+
+    expect(await manualSource.getDay("2026-11-02")).not.toBeNull();
+  });
+
+  it("keeps imported data for the same date", async () => {
+    await insertImportedDay("2026-11-01");
+    await post(fullDay);
+
+    await remove("2026-11-01");
+
+    const rows = await db.select().from(recoveryDays);
+    expect(rows.map((row) => row.source)).toEqual(["fit_import"]);
+  });
+
+  it("returns 404 when only imported data exists for the date", async () => {
+    await insertImportedDay("2026-11-01");
+
+    const res = await remove("2026-11-01");
+
+    expect(res.status).toBe(404);
+    expect(await db.select().from(recoveryDays)).toHaveLength(1);
+  });
+
+  it("returns 400 for an invalid date", async () => {
+    const res = await remove("2026-02-30");
+
+    expect(res.status).toBe(400);
+  });
+});
+
 describe("manualSource", () => {
   it("does not return rows from another source", async () => {
     await insertImportedDay("2026-11-01");

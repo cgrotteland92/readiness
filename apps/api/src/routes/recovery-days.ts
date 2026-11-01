@@ -1,4 +1,9 @@
-import { createRecoveryDayInput, isoDate } from "@readiness/shared";
+import {
+  createRecoveryDayInput,
+  isoDate,
+  updateRecoveryDayInput,
+} from "@readiness/shared";
+import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../db/client.ts";
@@ -9,6 +14,14 @@ const rangeQuery = z
   .object({ from: isoDate, to: isoDate })
   // YYYY-MM-DD strings sort in date order, so a string comparison is enough.
   .refine((range) => range.from <= range.to, "from must not be after to");
+
+// Edits and deletes only reach manual rows, so imported data stays as imported.
+function manualDay(date: string) {
+  return and(
+    eq(recoveryDays.source, manualSource.name),
+    eq(recoveryDays.date, date)
+  );
+}
 
 export const recoveryDayRoutes = new Hono();
 
@@ -53,4 +66,51 @@ recoveryDayRoutes.get("/:date", async (c) => {
   }
 
   return c.json(day);
+});
+
+recoveryDayRoutes.put("/:date", async (c) => {
+  const date = isoDate.safeParse(c.req.param("date"));
+  if (!date.success) {
+    return c.json({ error: "Invalid date" }, 400);
+  }
+
+  const body = await c.req.json().catch(() => undefined);
+  const input = updateRecoveryDayInput.safeParse(body);
+  if (!input.success) {
+    return c.json({ error: "Invalid input", issues: input.error.issues }, 400);
+  }
+
+  // Explicit nulls, because Drizzle skips undefined and would keep the old value.
+  const [updated] = await db
+    .update(recoveryDays)
+    .set({
+      hrv: input.data.hrv ?? null,
+      restingHr: input.data.restingHr ?? null,
+      sleepHours: input.data.sleepHours ?? null,
+      feeling: input.data.feeling ?? null,
+    })
+    .where(manualDay(date.data))
+    .returning();
+  if (!updated) {
+    return c.json({ error: "No recovery data for this date" }, 404);
+  }
+
+  return c.json(toRecoveryDay(updated));
+});
+
+recoveryDayRoutes.delete("/:date", async (c) => {
+  const date = isoDate.safeParse(c.req.param("date"));
+  if (!date.success) {
+    return c.json({ error: "Invalid date" }, 400);
+  }
+
+  const deleted = await db
+    .delete(recoveryDays)
+    .where(manualDay(date.data))
+    .returning();
+  if (deleted.length === 0) {
+    return c.json({ error: "No recovery data for this date" }, 404);
+  }
+
+  return c.body(null, 204);
 });

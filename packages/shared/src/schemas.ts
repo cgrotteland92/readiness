@@ -139,22 +139,28 @@ export const recoveryDaySchema = z.object({
 });
 export type RecoveryDay = z.infer<typeof recoveryDaySchema>;
 
-/**
- * Input for logging a recovery day by hand. The server sets the source.
- * A day with no values is rejected: it carries no information, and missing
- * data must never look like a logged day.
- */
+// A day with no values carries no information, and missing data must never
+// look like a logged day.
+function hasRecoveryValue(day: Partial<RecoveryDay>) {
+  return (
+    day.hrv !== undefined ||
+    day.restingHr !== undefined ||
+    day.sleepHours !== undefined ||
+    day.feeling !== undefined
+  );
+}
+
+/** Input for logging a recovery day by hand. The server sets the source. */
 export const createRecoveryDayInput = recoveryDaySchema
   .omit({ source: true })
-  .refine(
-    (day) =>
-      day.hrv !== undefined ||
-      day.restingHr !== undefined ||
-      day.sleepHours !== undefined ||
-      day.feeling !== undefined,
-    "Provide at least one value"
-  );
+  .refine(hasRecoveryValue, "Provide at least one value");
 export type CreateRecoveryDayInput = z.infer<typeof createRecoveryDayInput>;
+
+/** Input for correcting a logged day. The date comes from the URL. */
+export const updateRecoveryDayInput = recoveryDaySchema
+  .omit({ source: true, date: true })
+  .refine(hasRecoveryValue, "Provide at least one value");
+export type UpdateRecoveryDayInput = z.infer<typeof updateRecoveryDayInput>;
 
 // ---------- Restitusjonskilder (adapter-mønster) ----------
 
