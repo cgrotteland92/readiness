@@ -4,6 +4,7 @@ import {
   equipment,
   exerciseCategory,
   movementPattern,
+  muscleGroup,
   recoverySourceName,
   workoutType,
 } from "@readiness/shared";
@@ -30,6 +31,7 @@ export const movementPatternEnum = pgEnum(
   movementPattern.options
 );
 export const equipmentEnum = pgEnum("equipment", equipment.options);
+export const muscleGroupEnum = pgEnum("muscle_group", muscleGroup.options);
 export const exerciseCategoryEnum = pgEnum(
   "exercise_category",
   exerciseCategory.options
@@ -51,6 +53,10 @@ export const exercises = pgTable("exercises", {
   pattern: movementPatternEnum("pattern").notNull(),
   equipment: equipmentEnum("equipment").array().notNull().default(sql`'{}'`),
   category: exerciseCategoryEnum("category").notNull(),
+  muscleGroups: muscleGroupEnum("muscle_groups")
+    .array()
+    .notNull()
+    .default(sql`'{}'`),
   createdAt: createdAt(),
 });
 

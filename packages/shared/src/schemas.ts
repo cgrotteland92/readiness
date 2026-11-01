@@ -50,7 +50,24 @@ export const equipment = z.enum([
   "bike",
   "box",
   "jump_rope",
+  "medicine_ball",
+  "rope",
+  "sled",
+  "sandbag",
+  "ski_erg",
+  "parallettes",
   "other",
+]);
+
+export const muscleGroup = z.enum([
+  "quads",
+  "hamstrings",
+  "glutes",
+  "back",
+  "chest",
+  "shoulders",
+  "arms",
+  "core",
 ]);
 
 export const exerciseCategory = z.enum([
@@ -67,6 +84,7 @@ export const exerciseSchema = z.object({
   pattern: movementPattern,
   equipment: z.array(equipment).default([]),
   category: exerciseCategory,
+  muscleGroups: z.array(muscleGroup).default([]),
 });
 export type Exercise = z.infer<typeof exerciseSchema>;
 

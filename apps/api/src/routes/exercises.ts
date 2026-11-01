@@ -12,6 +12,7 @@ const exerciseColumns = {
   pattern: exercises.pattern,
   equipment: exercises.equipment,
   category: exercises.category,
+  muscleGroups: exercises.muscleGroups,
 };
 
 const exerciseId = z.string().uuid();
