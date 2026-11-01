@@ -6,7 +6,8 @@
 - [x] Shared schemas (`packages/shared`)
 - [x] Database setup (Postgres, migrations)
 - [x] API routes: exercises (create, list, get)
-- [ ] API routes: workouts (create, list, get)
+- [x] API routes: workouts (create, list, get)
+- [ ] API routes: workouts (edit, delete)
 - [ ] API routes: recovery days (create, list, get)
 - [ ] Seed ~200 exercises with tags
 - [ ] React UI: log a workout

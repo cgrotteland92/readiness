@@ -7,7 +7,23 @@ import { z } from "zod";
 /** Dato uten klokkeslett, "YYYY-MM-DD". Enklest å jobbe med for daglige data. */
 export const isoDate = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Bruk formatet YYYY-MM-DD");
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use the format YYYY-MM-DD")
+  .refine(isCalendarDate, "Not a real calendar date");
+
+// Date rolls impossible dates over (Feb 30 becomes Mar 2), so the round trip
+// catches them. Postgres has no year 0, so that is rejected too.
+function isCalendarDate(value: string) {
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return (
+    !Number.isNaN(parsed.getTime()) &&
+    parsed.getUTCFullYear() > 0 &&
+    parsed.toISOString().slice(0, 10) === value
+  );
+}
+
+// Upper limits match the database columns, so out-of-range input is a
+// validation error instead of a database error.
+const maxInt = 2_147_483_647;
 
 // ---------- Øvelser ----------
 
@@ -74,12 +90,12 @@ export const workoutType = z.enum([
 export const workoutEntrySchema = z.object({
   id: z.string().uuid(),
   exerciseId: z.string().uuid(),
-  position: z.number().int().nonnegative(), // rekkefølge i økta
-  sets: z.number().int().positive().optional(),
-  reps: z.number().int().positive().optional(),
-  weightKg: z.number().nonnegative().optional(),
-  durationSec: z.number().int().positive().optional(),
-  distanceM: z.number().nonnegative().optional(),
+  position: z.number().int().nonnegative().max(maxInt), // rekkefølge i økta
+  sets: z.number().int().positive().max(maxInt).optional(),
+  reps: z.number().int().positive().max(maxInt).optional(),
+  weightKg: z.number().nonnegative().max(9999.99).optional(),
+  durationSec: z.number().int().positive().max(maxInt).optional(),
+  distanceM: z.number().nonnegative().max(9_999_999.9).optional(),
   note: z.string().optional(),
 });
 export type WorkoutEntry = z.infer<typeof workoutEntrySchema>;
@@ -88,7 +104,7 @@ export const workoutSchema = z.object({
   id: z.string().uuid(),
   date: isoDate,
   type: workoutType,
-  durationMin: z.number().int().positive().optional(),
+  durationMin: z.number().int().positive().max(maxInt).optional(),
   rpe: z.number().int().min(1).max(10).optional(), // subjektiv anstrengelse
   note: z.string().optional(),
   entries: z.array(workoutEntrySchema),
@@ -98,7 +114,15 @@ export type Workout = z.infer<typeof workoutSchema>;
 /** Input når du oppretter en økt (uten id-er som serveren genererer). */
 export const createWorkoutInput = workoutSchema
   .omit({ id: true, entries: true })
-  .extend({ entries: z.array(workoutEntrySchema.omit({ id: true })) });
+  .extend({
+    entries: z
+      .array(workoutEntrySchema.omit({ id: true }))
+      .refine(
+        (entries) =>
+          new Set(entries.map((e) => e.position)).size === entries.length,
+        "Each entry needs its own position"
+      ),
+  });
 export type CreateWorkoutInput = z.infer<typeof createWorkoutInput>;
 
 // ---------- Restitusjon ----------
