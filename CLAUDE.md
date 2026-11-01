@@ -47,7 +47,7 @@ A layer is complete only when:
 
 A CrossFit training log that adjusts the day's session based on recovery (HRV). Later it gets a layer of AI agents that propose sessions. I will use the app myself (Garmin watch, CrossFit).
 
-The idea is inspired by ExorLive (a Norwegian SaaS for exercise programs and rehabilitation), which I am considering as an employer. We are not building a clone. Do not use ExorLive's name, design or content.
+The idea is inspired by software for exercise programs and rehabilitation. We are not building a clone of any product. Do not use another product's name, design or content.
 
 ## Decided
 
