@@ -89,6 +89,27 @@ Adapter pattern. All sources implement `RecoverySource` (see `schemas.ts`). The 
 2. `FitImportSource` in layer 2.
 3. Possibly an Apple Health adapter at the end.
 
+## Design guidelines
+
+Avoid the generic AI-generated look:
+
+- No decorative tags or pills. Tags only when they carry data (movement pattern, equipment).
+- No italicized accent words in headings, no display serif with tight negative letter spacing.
+- No section numbering and no code-style breadcrumbs as decoration.
+- No bordered containers around everything. Separate with spacing and background contrast.
+- No dividers between every section.
+- Keep the palette small: one neutral scale, one accent color, and green/yellow/red only for recovery status. No stacked opacity variations.
+- Keep charts simple, one message per chart. More detail makes them worse.
+- If an element does not help me log a workout or read my recovery, remove it.
+
+Instead:
+
+- Mobile first, large touch targets, everything reachable with a thumb.
+- Show the most important number big (today's recovery status, the next set).
+- One typeface, either the system font stack or a single sans.
+- Plain, short labels.
+- Propose a design direction in plan mode before building any UI.
+
 ## The layers (build one at a time, each must work on its own)
 
 1. **Log and exercise library.** Schemas in `shared`, database with migrations, API for exercises, workouts and recovery with validation, a simple React UI to log a workout and see history. Mobile friendly from the start, since I use it at the gym. Seed a couple of hundred exercises with tags. Check the license if you use an open database (for example wger). I use the app myself for a couple of weeks before we build further.
