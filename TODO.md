@@ -8,7 +8,8 @@
 - [x] API routes: exercises (create, list, get)
 - [x] API routes: workouts (create, list, get)
 - [ ] API routes: workouts (edit, delete)
-- [ ] API routes: recovery days (create, list, get)
+- [x] API routes: recovery days (create, list, get)
+- [ ] API routes: recovery days (edit, delete)
 - [ ] Seed ~200 exercises with tags
 - [ ] React UI: log a workout
 - [ ] React UI: view workout history
