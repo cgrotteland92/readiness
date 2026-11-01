@@ -5,7 +5,7 @@
 - [x] Monorepo setup (pnpm, TypeScript, Biome)
 - [x] Shared schemas (`packages/shared`)
 - [x] Database setup (Postgres, migrations)
-- [ ] API routes: exercises (create, list, get)
+- [x] API routes: exercises (create, list, get)
 - [ ] API routes: workouts (create, list, get)
 - [ ] API routes: recovery days (create, list, get)
 - [ ] Seed ~200 exercises with tags

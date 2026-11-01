@@ -54,6 +54,12 @@ export const exerciseSchema = z.object({
 });
 export type Exercise = z.infer<typeof exerciseSchema>;
 
+/** Input for creating an exercise. The server generates the id. */
+export const createExerciseInput = exerciseSchema
+  .omit({ id: true })
+  .extend({ name: z.string().trim().min(1) });
+export type CreateExerciseInput = z.infer<typeof createExerciseInput>;
+
 // ---------- Økter ----------
 
 export const workoutType = z.enum([

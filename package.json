@@ -4,6 +4,7 @@
   "scripts": {
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter @readiness/shared build && pnpm -r test",
     "lint": "biome check .",
     "format": "biome format --write .",
     "db:up": "docker compose up -d --wait",
