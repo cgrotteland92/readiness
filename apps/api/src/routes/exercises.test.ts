@@ -8,6 +8,7 @@ const backSquat = {
   pattern: "squat",
   equipment: ["barbell"],
   category: "strength",
+  muscleGroups: ["quads", "glutes"],
 };
 
 function post(body: unknown) {
@@ -43,6 +44,14 @@ describe("POST /exercises", () => {
     expect((await res.json()).equipment).toEqual([]);
   });
 
+  it("defaults muscle groups to an empty list", async () => {
+    const { muscleGroups, ...withoutMuscleGroups } = backSquat;
+    const res = await post(withoutMuscleGroups);
+
+    expect(res.status).toBe(201);
+    expect((await res.json()).muscleGroups).toEqual([]);
+  });
+
   it("ignores an id sent by the client", async () => {
     const id = "00000000-0000-4000-8000-000000000000";
     const res = await post({ ...backSquat, id });
@@ -63,6 +72,7 @@ describe("POST /exercises", () => {
     ["an unknown pattern", { ...backSquat, pattern: "wiggle" }],
     ["unknown equipment", { ...backSquat, equipment: ["hammer"] }],
     ["an unknown category", { ...backSquat, category: "fun" }],
+    ["an unknown muscle group", { ...backSquat, muscleGroups: ["ears"] }],
     ["malformed JSON", "{not json"],
   ])("returns 400 for %s and saves nothing", async (_label, body) => {
     const res = await post(body);
