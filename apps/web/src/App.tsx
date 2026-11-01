@@ -1,3 +1,5 @@
+import { LogWorkout } from "./log/LogWorkout.js";
+
 export default function App() {
-  return <h1>Readiness</h1>;
+  return <LogWorkout />;
 }
