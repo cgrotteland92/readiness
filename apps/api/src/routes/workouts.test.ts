@@ -1,7 +1,8 @@
 import { workoutSchema } from "@readiness/shared";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { app } from "../app.ts";
-import { sql } from "../db/client.ts";
+import { db, sql } from "../db/client.ts";
+import { workoutEntries } from "../db/schema.ts";
 import { resetDb } from "../test/reset-db.ts";
 
 const unknownId = "00000000-0000-4000-8000-000000000000";
@@ -185,6 +186,172 @@ describe("POST /workouts", () => {
     expect(await listWorkouts()).toEqual([]);
 
     log.mockRestore();
+  });
+});
+
+describe("PUT /workouts/:id", () => {
+  function put(id: string, body: unknown) {
+    return app.request(`/workouts/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: typeof body === "string" ? body : JSON.stringify(body),
+    });
+  }
+
+  async function createWorkout() {
+    return (await post("/workouts", validWorkout())).json();
+  }
+
+  it("replaces the workout and its entries and keeps the id", async () => {
+    const created = await createWorkout();
+
+    const res = await put(created.id, {
+      date: "2026-11-02",
+      type: "metcon",
+      rpe: 9,
+      entries: [{ exerciseId, position: 0, reps: 21 }],
+    });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(workoutSchema.safeParse(body).success).toBe(true);
+    expect(body).toMatchObject({
+      id: created.id,
+      date: "2026-11-02",
+      type: "metcon",
+      rpe: 9,
+    });
+    expect(body.entries).toHaveLength(1);
+    expect(body.entries[0].reps).toBe(21);
+    const stored = await (await app.request(`/workouts/${created.id}`)).json();
+    expect(stored).toEqual(body);
+  });
+
+  it("clears optional fields that are left out", async () => {
+    const created = await createWorkout();
+
+    const res = await put(created.id, {
+      date: "2026-11-01",
+      type: "rest",
+      entries: [],
+    });
+    const body = await res.json();
+
+    expect(body).not.toHaveProperty("durationMin");
+    expect(body).not.toHaveProperty("rpe");
+    expect(body).not.toHaveProperty("note");
+    expect(body.entries).toEqual([]);
+  });
+
+  it("does not change other workouts", async () => {
+    const created = await createWorkout();
+    const other = await createWorkout();
+
+    await put(created.id, { date: "2026-11-02", type: "rest", entries: [] });
+
+    const stored = await (await app.request(`/workouts/${other.id}`)).json();
+    expect(stored).toEqual(other);
+  });
+
+  it("returns 404 for an unknown id", async () => {
+    const res = await put(unknownId, validWorkout());
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 400 for an id that is not a UUID", async () => {
+    const res = await put("not-a-uuid", validWorkout());
+
+    expect(res.status).toBe(400);
+  });
+
+  it.each([
+    ["an impossible date", { date: "2026-02-30" }],
+    ["rpe above 10", { rpe: 11 }],
+    [
+      "an unknown exercise",
+      { entries: [{ exerciseId: unknownId, position: 0 }] },
+    ],
+  ])("returns 400 for %s and changes nothing", async (_label, change) => {
+    const created = await createWorkout();
+
+    const res = await put(created.id, { ...validWorkout(), ...change });
+
+    expect(res.status).toBe(400);
+    const stored = await (await app.request(`/workouts/${created.id}`)).json();
+    expect(stored).toEqual(created);
+  });
+
+  it("returns 400 for malformed JSON", async () => {
+    const created = await createWorkout();
+
+    const res = await put(created.id, "{not json");
+
+    expect(res.status).toBe(400);
+  });
+
+  it("keeps the old entries if inserting the new ones fails", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const created = await createWorkout();
+
+    // Passes validation, but Postgres rejects a null byte in text.
+    const res = await put(created.id, {
+      ...validWorkout(),
+      date: "2026-11-02",
+      entries: [{ exerciseId, position: 0, note: "bad\u0000note" }],
+    });
+
+    expect(res.status).toBe(500);
+    const stored = await (await app.request(`/workouts/${created.id}`)).json();
+    expect(stored).toEqual(created);
+
+    log.mockRestore();
+  });
+});
+
+describe("DELETE /workouts/:id", () => {
+  it("deletes the workout and its entries", async () => {
+    const created = await (await post("/workouts", validWorkout())).json();
+
+    const res = await app.request(`/workouts/${created.id}`, {
+      method: "DELETE",
+    });
+
+    expect(res.status).toBe(204);
+    expect(await listWorkouts()).toEqual([]);
+    expect(await db.select().from(workoutEntries)).toEqual([]);
+  });
+
+  it("keeps the exercises the workout used", async () => {
+    const created = await (await post("/workouts", validWorkout())).json();
+
+    await app.request(`/workouts/${created.id}`, { method: "DELETE" });
+
+    const res = await app.request(`/exercises/${exerciseId}`);
+    expect(res.status).toBe(200);
+  });
+
+  it("does not delete other workouts", async () => {
+    const created = await (await post("/workouts", validWorkout())).json();
+    const other = await (await post("/workouts", validWorkout())).json();
+
+    await app.request(`/workouts/${created.id}`, { method: "DELETE" });
+
+    expect(await listWorkouts()).toEqual([other]);
+  });
+
+  it("returns 404 for an unknown id", async () => {
+    const res = await app.request(`/workouts/${unknownId}`, {
+      method: "DELETE",
+    });
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 400 for an id that is not a UUID", async () => {
+    const res = await app.request("/workouts/not-a-uuid", { method: "DELETE" });
+
+    expect(res.status).toBe(400);
   });
 });
 
